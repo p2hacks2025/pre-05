@@ -1,163 +1,178 @@
 using System.Collections.Generic;
-using System.Linq; // ソート機能に必要
+using System.Linq;
 using UnityEngine;
-using UnityEngine.UI; // RawImage等を扱う
-using TMPro;          // TextMeshProを扱う
+using UnityEngine.UI;
+using TMPro;
+
+[System.Serializable]
+public class BattleResultData
+{
+    public string name;
+    public Sprite sprite;
+    public int score;
+}
 
 public class BattleManager : MonoBehaviour
 {
     [Header("UI Components (Battle)")]
-    [SerializeField] private RawImage rawImageA; // 上の画像
-    [SerializeField] private RawImage rawImageB; // 下の画像
-    [SerializeField] private GameObject battlePanel; // Panel1
+    [SerializeField] private RawImage rawImageA;
+    [SerializeField] private RawImage rawImageB;
+    [SerializeField] private TextMeshProUGUI textA;
+    [SerializeField] private TextMeshProUGUI textB;
+    [SerializeField] private GameObject battlePanel;
+    [SerializeField] private Slider battleProgressBar;
 
     [Header("Result Components (Panel2)")]
-    [SerializeField] private GameObject panel2;       // 結果画面
-    [SerializeField] private Transform resultContainer; // Content
-    [SerializeField] private GameObject resultImagePrefab; // プレハブ
+    [SerializeField] private GameObject panel2;
+    [SerializeField] private Transform resultContainer;
+    [SerializeField] private GameObject resultImagePrefab;
 
-    // 内部データ
+    public List<BattleResultData> FinalResults { get; private set; }
+
     private List<Sprite> battleImages;
-    private int[] scores; // 各画像の勝ち点
+    private List<string> battleNames;
+    private int[] scores;
+    private bool isImageMode;
+    private int indexA, indexB, currentMatchNum, totalMatchNum;
 
-    private int indexA = 0;
-    private int indexB = 1;
-
-    // バトルの初期化（ここが呼ばれるまで scores は null です）
     public void StartBattle(List<Sprite> images)
     {
+        isImageMode = true;
         battleImages = images;
-        scores = new int[battleImages.Count]; // ここで初めて箱が作られる
-        indexA = 0;
-        indexB = 1;
+        battleNames = images.Select(s => s.name).ToList();
+        InitializeBattle();
+    }
 
-        if (battlePanel != null) battlePanel.SetActive(true);
-        if (panel2 != null) panel2.SetActive(false);
+    public void StartBattleText(List<string> names)
+    {
+        isImageMode = false;
+        battleImages = null;
+        battleNames = names;
+        InitializeBattle();
+    }
 
+    private void InitializeBattle()
+    {
+        scores = new int[battleNames.Count];
+        indexA = 0; indexB = 1; currentMatchNum = 1;
+        totalMatchNum = (battleNames.Count * (battleNames.Count - 1)) / 2;
+
+        if (battleProgressBar)
+        {
+            battleProgressBar.minValue = 0;
+            battleProgressBar.maxValue = totalMatchNum;
+            battleProgressBar.value = 1;
+        }
+        if (battlePanel) battlePanel.SetActive(true);
+        if (panel2) panel2.SetActive(false);
         ShowCurrentMatch();
     }
 
-    // 現在の対戦を表示
     private void ShowCurrentMatch()
     {
-        // 画像A
-        Texture texA = battleImages[indexA].texture;
-        rawImageA.texture = texA;
-        FitAspectRatio(rawImageA, texA);
+        if (rawImageA) rawImageA.gameObject.SetActive(isImageMode);
+        if (rawImageB) rawImageB.gameObject.SetActive(isImageMode);
+        if (textA) textA.gameObject.SetActive(!isImageMode);
+        if (textB) textB.gameObject.SetActive(!isImageMode);
 
-        // 画像B
-        Texture texB = battleImages[indexB].texture;
-        rawImageB.texture = texB;
-        FitAspectRatio(rawImageB, texB);
-    }
-
-    // アスペクト比を合わせる便利関数
-    private void FitAspectRatio(RawImage targetImage, Texture texture)
-    {
-        var fitter = targetImage.GetComponent<AspectRatioFitter>();
-        if (fitter != null)
+        if (isImageMode)
         {
-            float ratio = (float)texture.width / texture.height;
-            fitter.aspectRatio = ratio;
-        }
-    }
-
-    // Aが勝ち
-    public void OnClickButtonA()
-    {
-        // ★修正: エラー防止の安全装置
-        // まだ画像が読み込まれていないのにボタンを押してもエラーにならないようにする
-        if (scores == null || scores.Length == 0) return;
-
-        scores[indexA]++;
-        NextMatch();
-    }
-
-    // Bが勝ち
-    public void OnClickButtonB()
-    {
-        // ★修正: エラー防止の安全装置
-        if (scores == null || scores.Length == 0) return;
-
-        scores[indexB]++;
-        NextMatch();
-    }
-
-    // 次の試合へ
-    private void NextMatch()
-    {
-        indexB++;
-        if (indexB >= battleImages.Count)
-        {
-            indexA++;
-            indexB = indexA + 1;
-        }
-
-        if (indexA >= battleImages.Count - 1)
-        {
-            EndBattle();
+            rawImageA.texture = battleImages[indexA].texture;
+            rawImageB.texture = battleImages[indexB].texture;
         }
         else
         {
-            ShowCurrentMatch();
+            if (textA) textA.text = battleNames[indexA];
+            if (textB) textB.text = battleNames[indexB];
         }
+        if (battleProgressBar) battleProgressBar.value = currentMatchNum;
     }
 
-    // 結果発表
+    public void OnClickButtonA() { if (scores != null) { scores[indexA]++; NextMatch(); } }
+    public void OnClickButtonB() { if (scores != null) { scores[indexB]++; NextMatch(); } }
+
+    private void NextMatch()
+    {
+        currentMatchNum++;
+        indexB++;
+        if (indexB >= battleNames.Count) { indexA++; indexB = indexA + 1; }
+        if (indexA >= battleNames.Count - 1) EndBattle();
+        else ShowCurrentMatch();
+    }
+
     private void EndBattle()
     {
-        Debug.Log("全試合終了！Panel2へ移動します。");
+        if (battlePanel) battlePanel.SetActive(false);
+        if (panel2) panel2.SetActive(true);
 
-        if (battlePanel != null) battlePanel.SetActive(false);
-        if (panel2 != null) panel2.SetActive(true);
-
-        // データリスト作成
-        List<ImageScorePair> resultList = new List<ImageScorePair>();
-        for (int i = 0; i < battleImages.Count; i++)
+        FinalResults = new List<BattleResultData>();
+        for (int i = 0; i < battleNames.Count; i++)
         {
-            resultList.Add(new ImageScorePair { sprite = battleImages[i], score = scores[i] });
+            FinalResults.Add(new BattleResultData
+            {
+                name = battleNames[i],
+                sprite = isImageMode ? battleImages[i] : null,
+                score = scores[i]
+            });
         }
 
-        // 表示順序：点数が低い順（左→右で順位が上がるように）
-        var sortedList = resultList.OrderBy(x => x.score).ToList();
+        var sorted = FinalResults.OrderByDescending(x => x.score).ToList();
+        sorted.Reverse();
+        foreach (Transform child in resultContainer) Destroy(child.gameObject);
 
-        // 以前の結果を削除
-        foreach (Transform child in resultContainer)
-        {
-            Destroy(child.gameObject);
-        }
+        int totalCount = battleNames.Count;
 
-        int maxBattles = battleImages.Count - 1;
-
-        // 結果生成ループ
-        foreach (var item in sortedList)
+        foreach (var item in sorted)
         {
             GameObject obj = Instantiate(resultImagePrefab, resultContainer);
+            obj.SetActive(true);
 
-            // 画像セット（プレハブ内の構造が変わっても探せるようにInChildrenを使用）
-            RawImage rawImg = obj.GetComponentInChildren<RawImage>();
-            if (rawImg != null)
+            // プレハブ自体の高さを確保
+            LayoutElement layout = obj.GetComponent<LayoutElement>() ?? obj.AddComponent<LayoutElement>();
+            layout.preferredHeight = isImageMode ? 400 : 150;
+
+            // 親オブジェクトの RawImage を取得
+            RawImage img = obj.GetComponent<RawImage>();
+            // その子要素の TextMeshPro を取得
+            TextMeshProUGUI txt = obj.GetComponentInChildren<TextMeshProUGUI>();
+
+            if (img != null)
             {
-                rawImg.texture = item.sprite.texture;
-                FitAspectRatio(rawImg, item.sprite.texture);
+                if (isImageMode && item.sprite != null)
+                {
+                    // 画像モード：通常表示
+                    img.color = Color.white;
+                    img.texture = item.sprite.texture;
+                }
+                else
+                {
+                    // 文字モード：親(RawImage)を透明にして、子(Text)は見えるようにする
+                    // SetActive(false)をすると子も消えるため、これが必要
+                    img.color = new Color(0, 0, 0, 0);
+                }
             }
 
-            // テキストセット（TextMeshPro対応 & 順位計算つき）
-            TextMeshProUGUI scoreText = obj.GetComponentInChildren<TextMeshProUGUI>();
-            if (scoreText != null)
+            if (txt != null)
             {
-                // 自分より点数が高い人の数を数えて順位を決める（同率順位対応）
-                // 例：3点, 3点, 1点 → 1位, 1位, 3位
-                int rank = resultList.Count(x => x.score > item.score) + 1;
+                int rank = sorted.Count(x => x.score > item.score) + 1;
+                txt.text = $"No.{rank} </b>\n{item.name}</b>\nlike {item.score} / {totalCount - 1}";
+                txt.alignment = TextAlignmentOptions.Center;
 
-                scoreText.text = $"第{rank}位\n好き率 {item.score}／{maxBattles}";
+                // 文字モードのときは、親の画像枠に縛られないようテキストエリアを広げる
+                if (!isImageMode)
+                {
+                    RectTransform rt = txt.GetComponent<RectTransform>();
+                    rt.anchorMin = Vector2.zero;
+                    rt.anchorMax = Vector2.one;
+                    rt.offsetMin = new Vector2(10, 10);
+                    rt.offsetMax = new Vector2(-10, -10);
+                }
             }
         }
-    }
 
-    class ImageScorePair
-    {
-        public Sprite sprite;
-        public int score;
+        // スクロールビューの再計算を強制
+        Canvas.ForceUpdateCanvases();
+        ScrollRect sr = resultContainer.GetComponentInParent<ScrollRect>();
+        if (sr != null) sr.verticalNormalizedPosition = 1f;
     }
 }

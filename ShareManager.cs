@@ -1,42 +1,58 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
-using System.IO; // ファイル操作に必要
+using System.Collections.Generic;
+using System.Linq;
+using TMPro;
 
 public class ShareManager : MonoBehaviour
 {
-    [Header("隠したいUI")]
-    [SerializeField] private GameObject shareButton; // シェアするときだけ消すボタン
+    [Header("Scripts")]
+    [SerializeField] private BattleManager battleManager;
+    [SerializeField] private DatabaseManager dbManager;
 
-    public void OnClickShare()
+    [Header("Input")]
+    [SerializeField] private TMP_InputField titleInputField; // タイトル入力欄
+
+    // 【シェアボタン】から呼び出す
+    public void OnClickShareAndUpload()
     {
-        // コルーチン（時間差処理）を開始
-        StartCoroutine(TakeScreenshotAndShare());
+        UploadAndProcess((url) => {
+            ExecuteSNSShare(url);
+        });
     }
 
-    private IEnumerator TakeScreenshotAndShare()
+    // 【投稿ボタン】から呼び出す
+    public void OnClickPostOnly()
     {
-        // 1. シェアボタンを隠す（スクショにボタンが写るとダサいので）
-        if (shareButton != null) shareButton.SetActive(false);
+        UploadAndProcess((url) => {
+            // SNSは開かず、完了ログや通知を出す
+            Debug.Log("<color=cyan>投稿が完了しました！ URL: " + url + "</color>");
+            // 必要であればここで「投稿しました」という簡易ポップアップなどを出す
+        });
+    }
 
-        // 2. 画面の描画が終わるまで待つ（重要）
-        yield return new WaitForEndOfFrame();
+    private void UploadAndProcess(System.Action<string> onComplete)
+    {
+        if (battleManager == null || battleManager.FinalResults == null || battleManager.FinalResults.Count == 0) return;
 
-        // 3. スクリーンショットを撮影してデータにする
-        Texture2D ss = ScreenCapture.CaptureScreenshotAsTexture();
+        // タイトルが空ならデフォルト名にする
+        string title = string.IsNullOrEmpty(titleInputField.text) ? "どっちが好き？" : titleInputField.text;
 
-        // 4. ボタンを再表示
-        if (shareButton != null) shareButton.SetActive(true);
+        string newPostId = System.Guid.NewGuid().ToString();
+        List<string> names = battleManager.FinalResults.Select(x => x.name).ToList();
 
-        // 5. NativeShareを使ってシェア画面を呼び出す
-        new NativeShare()
-            .AddFile(ss, "result.png") // 画像を添付
-            .SetSubject("好きランキング結果") // 件名（メール等用）
-            .SetText("私の好きな画像ランキング！ #Unity #推しランキング") // 本文
-            .SetCallback((result, shareTarget) => Debug.Log("シェア結果: " + result + ", アプリ: " + shareTarget))
-            .Share(); // シェア実行！
+        Debug.Log("Firebaseに保存中...");
+        dbManager.SavePostToDatabase(newPostId, title, names, (url) => {
+            onComplete?.Invoke(url);
+        });
+    }
 
-        // メモリのお掃除
-        Destroy(ss);
+    private void ExecuteSNSShare(string shareUrl)
+    {
+        var winner = battleManager.FinalResults.Last(); // 1位
+        string shareText = $"「どっちが好き？」で対戦したよ！\n1位は【{winner.name}】でした！\n遊んでみてね！\n#どっちが好きアプリ";
+        string twitterUrl = "https://twitter.com/intent/tweet?text=" + System.Uri.EscapeDataString(shareText + "\n" + shareUrl);
+
+        GUIUtility.systemCopyBuffer = shareUrl;
+        Application.OpenURL(twitterUrl);
     }
 }
