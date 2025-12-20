@@ -35,6 +35,9 @@ public class BattleManager : MonoBehaviour
     private bool isImageMode;
     private int indexA, indexB, currentMatchNum, totalMatchNum;
 
+    // ===============================
+    // ãƒãƒˆãƒ«é–‹å§‹
+    // ===============================
     public void StartBattle(List<Sprite> images)
     {
         isImageMode = true;
@@ -54,7 +57,9 @@ public class BattleManager : MonoBehaviour
     private void InitializeBattle()
     {
         scores = new int[battleNames.Count];
-        indexA = 0; indexB = 1; currentMatchNum = 1;
+        indexA = 0;
+        indexB = 1;
+        currentMatchNum = 1;
         totalMatchNum = (battleNames.Count * (battleNames.Count - 1)) / 2;
 
         if (battleProgressBar)
@@ -63,11 +68,16 @@ public class BattleManager : MonoBehaviour
             battleProgressBar.maxValue = totalMatchNum;
             battleProgressBar.value = 1;
         }
+
         if (battlePanel) battlePanel.SetActive(true);
         if (panel2) panel2.SetActive(false);
+
         ShowCurrentMatch();
     }
 
+    // ===============================
+    // ç¾åœ¨ã®å¯¾æˆ¦è¡¨ç¤º
+    // ===============================
     private void ShowCurrentMatch()
     {
         if (rawImageA) rawImageA.gameObject.SetActive(isImageMode);
@@ -82,30 +92,56 @@ public class BattleManager : MonoBehaviour
         }
         else
         {
-            if (textA) textA.text = battleNames[indexA];
-            if (textB) textB.text = battleNames[indexB];
+            textA.text = battleNames[indexA];
+            textB.text = battleNames[indexB];
         }
-        if (battleProgressBar) battleProgressBar.value = currentMatchNum;
+
+        if (battleProgressBar)
+            battleProgressBar.value = currentMatchNum;
     }
 
-    public void OnClickButtonA() { if (scores != null) { scores[indexA]++; NextMatch(); } }
-    public void OnClickButtonB() { if (scores != null) { scores[indexB]++; NextMatch(); } }
+    // ===============================
+    // ãƒœã‚¿ãƒ³å‡¦ç†
+    // ===============================
+    public void OnClickButtonA()
+    {
+        scores[indexA]++;
+        NextMatch();
+    }
+
+    public void OnClickButtonB()
+    {
+        scores[indexB]++;
+        NextMatch();
+    }
 
     private void NextMatch()
     {
         currentMatchNum++;
         indexB++;
-        if (indexB >= battleNames.Count) { indexA++; indexB = indexA + 1; }
-        if (indexA >= battleNames.Count - 1) EndBattle();
-        else ShowCurrentMatch();
+
+        if (indexB >= battleNames.Count)
+        {
+            indexA++;
+            indexB = indexA + 1;
+        }
+
+        if (indexA >= battleNames.Count - 1)
+            EndBattle();
+        else
+            ShowCurrentMatch();
     }
 
+    // ===============================
+    // çµæœè¡¨ç¤º
+    // ===============================
     private void EndBattle()
     {
         if (battlePanel) battlePanel.SetActive(false);
         if (panel2) panel2.SetActive(true);
 
         FinalResults = new List<BattleResultData>();
+
         for (int i = 0; i < battleNames.Count; i++)
         {
             FinalResults.Add(new BattleResultData
@@ -116,9 +152,11 @@ public class BattleManager : MonoBehaviour
             });
         }
 
-        var sorted = FinalResults.OrderByDescending(x => x.score).ToList();
-        sorted.Reverse();
-        foreach (Transform child in resultContainer) Destroy(child.gameObject);
+        // ã‚¹ã‚³ã‚¢é †ï¼ˆä½ â†’ é«˜ï¼‰
+        var sorted = FinalResults.OrderBy(x => x.score).ToList();
+
+        foreach (Transform child in resultContainer)
+            Destroy(child.gameObject);
 
         int totalCount = battleNames.Count;
 
@@ -127,27 +165,21 @@ public class BattleManager : MonoBehaviour
             GameObject obj = Instantiate(resultImagePrefab, resultContainer);
             obj.SetActive(true);
 
-            // ƒvƒŒƒnƒu©‘Ì‚Ì‚‚³‚ğŠm•Û
             LayoutElement layout = obj.GetComponent<LayoutElement>() ?? obj.AddComponent<LayoutElement>();
             layout.preferredHeight = isImageMode ? 400 : 150;
 
-            // eƒIƒuƒWƒFƒNƒg‚Ì RawImage ‚ğæ“¾
             RawImage img = obj.GetComponent<RawImage>();
-            // ‚»‚Ìq—v‘f‚Ì TextMeshPro ‚ğæ“¾
             TextMeshProUGUI txt = obj.GetComponentInChildren<TextMeshProUGUI>();
 
             if (img != null)
             {
                 if (isImageMode && item.sprite != null)
                 {
-                    // ‰æ‘œƒ‚[ƒhF’Êí•\¦
                     img.color = Color.white;
                     img.texture = item.sprite.texture;
                 }
                 else
                 {
-                    // •¶šƒ‚[ƒhFe(RawImage)‚ğ“§–¾‚É‚µ‚ÄAq(Text)‚ÍŒ©‚¦‚é‚æ‚¤‚É‚·‚é
-                    // SetActive(false)‚ğ‚·‚é‚Æq‚àÁ‚¦‚é‚½‚ßA‚±‚ê‚ª•K—v
                     img.color = new Color(0, 0, 0, 0);
                 }
             }
@@ -155,10 +187,33 @@ public class BattleManager : MonoBehaviour
             if (txt != null)
             {
                 int rank = sorted.Count(x => x.score > item.score) + 1;
-                txt.text = $"No.{rank} </b>\n{item.name}</b>\nlike {item.score} / {totalCount - 1}";
+
+                // ===============================
+                // â˜… è‰²åˆ†ã‘ï¼ˆNo.4ä»¥é™ã¯é»’ï¼‰â˜…
+                // ===============================
+                switch (rank)
+                {
+                    case 1: // é‡‘
+                        txt.color = new Color(1f, 0.84f, 0f);
+                        break;
+                    case 2: // éŠ€
+                        txt.color = new Color(0.75f, 0.75f, 0.75f);
+                        break;
+                    case 3: // éŠ…
+                        txt.color = new Color(0.8f, 0.5f, 0.2f);
+                        break;
+                    default: // No.4 ä»¥é™
+                        txt.color = Color.black;
+                        break;
+                }
+
+                txt.text =
+                    $"No.{rank}\n" +
+                    $"{item.name}\n" +
+                    $"like {item.score} / {totalCount - 1}";
+
                 txt.alignment = TextAlignmentOptions.Center;
 
-                // •¶šƒ‚[ƒh‚Ì‚Æ‚«‚ÍAe‚Ì‰æ‘œ˜g‚É”›‚ç‚ê‚È‚¢‚æ‚¤ƒeƒLƒXƒgƒGƒŠƒA‚ğL‚°‚é
                 if (!isImageMode)
                 {
                     RectTransform rt = txt.GetComponent<RectTransform>();
@@ -170,7 +225,6 @@ public class BattleManager : MonoBehaviour
             }
         }
 
-        // ƒXƒNƒ[ƒ‹ƒrƒ…[‚ÌÄŒvZ‚ğ‹­§
         Canvas.ForceUpdateCanvases();
         ScrollRect sr = resultContainer.GetComponentInParent<ScrollRect>();
         if (sr != null) sr.verticalNormalizedPosition = 1f;
