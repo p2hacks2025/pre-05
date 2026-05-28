@@ -2,7 +2,8 @@
 
 ## プロダクト名
 GEMS（ジェムズ）
-<img width="300" height="300" alt="GEMSロゴ" src="https://github.com/user-attachments/assets/9920e320-9ef9-4ca1-9daa-ec1cca358ac2" />
+<img width="300" height="300" alt="GEMSロゴ" src="https://github.com/user-attachments/assets/9920e320-9ef9-4ca1-9daa-ec1cca358ac2" 
+実際の発表資料は[コチラ（Googleドライブ）](https://drive.google.com/drive/folders/1idHoOVtL0dd9LlYiFu85ySeybqijipnI?usp=drive_link)
 
 ## コンセプト
 Gallery Emotional Memory Selecterの頭文字をとってGEMS。自分の思い出が詰まった写真を選んで、ランキングを作ることができる！また、他の人の思い出から、自分のオリジナルのランキングを作成することができる！自分にとって一番大切な思い出はなんなのか、他人と自分の大切なものにはどういう関係があるのかを知ることができる。
