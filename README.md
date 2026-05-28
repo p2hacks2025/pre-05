@@ -3,6 +3,7 @@
 ## プロダクト名
 GEMS（ジェムズ）
 <img width="300" height="300" alt="GEMSロゴ" src="https://github.com/user-attachments/assets/9920e320-9ef9-4ca1-9daa-ec1cca358ac2"> 
+
 実際の発表資料は[コチラ（Googleドライブ）](https://drive.google.com/drive/folders/1idHoOVtL0dd9LlYiFu85ySeybqijipnI?usp=drive_link)
 
 ## コンセプト
